@@ -9,14 +9,14 @@ function LoginForm() {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginAdmin } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    const success = login(credentials.username, credentials.password);
+    const success = loginAdmin(credentials.username, credentials.password);
     
     if (success) {
       // Redirect to dashboard on successful login
@@ -107,14 +107,14 @@ function LoginForm() {
 }
 
 export default function AdminPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, userType, isLoading } = useAuth();
 
-  // Redirect to dashboard if already authenticated
+  // Redirect to dashboard if already authenticated as admin
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && userType === 'admin') {
       window.location.href = '/admin/dashboard';
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userType]);
 
   // Show loading spinner while checking auth
   if (isLoading) {
@@ -128,8 +128,8 @@ export default function AdminPage() {
     );
   }
 
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
+  // Show login form if not authenticated or not admin
+  if (!isAuthenticated || userType !== 'admin') {
     return <LoginForm />;
   }
 

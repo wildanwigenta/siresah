@@ -117,25 +117,95 @@ export function useComplaintsStore() {
   }
 }
 
-// Authentication store
+// Authentication store - Updated to support both admin and mahasiswa
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  nim?: string; // Only for mahasiswa
+  faculty?: string; // Only for mahasiswa
+  role: 'admin' | 'mahasiswa';
+}
+
 interface AuthState {
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  user: User | null;
+  userType: 'admin' | 'mahasiswa' | null;
+  loginAdmin: (username: string, password: string) => boolean;
+  loginMahasiswa: (email: string, password: string) => { success: boolean; user?: User };
+  registerMahasiswa: (userData: { name: string; email: string; password: string; nim: string; faculty: string }) => boolean;
   logout: () => void;
 }
 
+// Mock mahasiswa users for demo
+const mockMahasiswaUsers = [
+  {
+    id: '1',
+    name: 'Ahmad Rizki',
+    email: 'ahmad.rizki@student.univ.ac.id',
+    password: 'password123',
+    nim: '2021001001',
+    faculty: 'Fakultas Teknik',
+    role: 'mahasiswa' as const
+  },
+  {
+    id: '2',
+    name: 'Sari Dewi',
+    email: 'sari.dewi@student.univ.ac.id',
+    password: 'password123',
+    nim: '2021002002',
+    faculty: 'Fakultas Ekonomi dan Bisnis',
+    role: 'mahasiswa' as const
+  }
+];
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
-      login: (username: string, password: string) => {
+      user: null,
+      userType: null,
+      loginAdmin: (username: string, password: string) => {
         if (username === 'admin' && password === 'admin') {
-          set({ isAuthenticated: true });
+          const adminUser: User = {
+            id: 'admin',
+            name: 'Admin Kampus',
+            email: 'admin@univ.ac.id',
+            role: 'admin'
+          };
+          set({ isAuthenticated: true, user: adminUser, userType: 'admin' });
           return true;
         }
         return false;
       },
-      logout: () => set({ isAuthenticated: false }),
+      loginMahasiswa: (email: string, password: string) => {
+        const user = mockMahasiswaUsers.find(u => u.email === email && u.password === password);
+        if (user) {
+          const { password: _, ...userWithoutPassword } = user;
+          set({ isAuthenticated: true, user: userWithoutPassword, userType: 'mahasiswa' });
+          return { success: true, user: userWithoutPassword };
+        }
+        return { success: false };
+      },
+      registerMahasiswa: (userData) => {
+        // Check if email already exists
+        const existingUser = mockMahasiswaUsers.find(u => u.email === userData.email);
+        if (existingUser) {
+          return false;
+        }
+        
+        // In a real app, this would save to a database
+        const newUser = {
+          id: Date.now().toString(),
+          ...userData,
+          password: userData.password,
+          role: 'mahasiswa' as const
+        };
+        mockMahasiswaUsers.push(newUser);
+        
+        return true;
+      },
+      logout: () => set({ isAuthenticated: false, user: null, userType: null }),
     }),
     {
       name: 'auth-storage',
@@ -143,10 +213,10 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Authentication hook
+// Authentication hook - Updated
 export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { isAuthenticated, login, logout } = useAuthStore();
+  const { isAuthenticated, user, userType, loginAdmin, loginMahasiswa, registerMahasiswa, logout } = useAuthStore();
 
   useEffect(() => {
     setIsLoading(false);
@@ -154,8 +224,12 @@ export const useAuth = () => {
 
   return {
     isAuthenticated,
+    user,
+    userType,
     isLoading,
-    login,
+    loginAdmin,
+    loginMahasiswa,
+    registerMahasiswa,
     logout,
   };
 };

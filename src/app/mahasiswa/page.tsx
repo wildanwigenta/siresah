@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { categories, locations, faculties } from '@/data/mockData';
 import type { Complaint } from '@/data/mockData';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useComplaintsStore } from '@/lib/utils';
+import { useComplaintsStore, useAuth } from '@/lib/utils';
 
 export default function MahasiswaPage() {
+  const { isAuthenticated, userType, isLoading, user } = useAuth();
   const { complaints, isLoaded, addComplaint, incrementVotes, addComment } = useComplaintsStore();
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState({
@@ -40,6 +41,23 @@ export default function MahasiswaPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const complaintsPerPage = 5;
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const filteredComplaints = complaints.filter(complaint => {
     const matchesCategory = !filter.category || complaint.category === filter.category;
     const matchesStatus = !filter.status || complaint.status === filter.status;
@@ -68,11 +86,6 @@ export default function MahasiswaPage() {
   };
 
   const trendingComplaints = getTrendingComplaints();
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filter]);
 
   const handleSubmitComplaint = (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +155,12 @@ export default function MahasiswaPage() {
 
   const toggleCommentForm = (complaintId: string) => {
     setShowCommentForm(showCommentForm === complaintId ? null : complaintId);
-    setNewComment({ content: '', isAnonymous: false, authorName: '' });
+    // Auto-populate with user's name if authenticated, otherwise reset
+    setNewComment({ 
+      content: '', 
+      isAnonymous: false, 
+      authorName: isAuthenticated && user ? user.name : '' 
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -166,15 +184,86 @@ export default function MahasiswaPage() {
               </Link>
               <h1 className="text-2xl font-bold text-gray-800">Portal Mahasiswa</h1>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              + Kirim Keluhan
-            </button>
+            <div className="flex items-center space-x-4">
+              {isAuthenticated && userType === 'mahasiswa' ? (
+                <>
+                  <Link
+                    href="/mahasiswa/dashboard"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    📊 Dashboard Saya
+                  </Link>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    + Kirim Keluhan
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/mahasiswa/login"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Login / Daftar
+                  </Link>
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    + Kirim Keluhan
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Authentication Notice - only show if not authenticated */}
+      {!isAuthenticated && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-blue-800 font-medium">
+                  Untuk pengalaman yang lebih baik dan tracking keluhan Anda
+                </p>
+                <p className="text-blue-700 text-sm">
+                  <Link href="/mahasiswa/login" className="font-medium hover:underline">
+                    Login atau daftar akun mahasiswa
+                  </Link> untuk mengakses dashboard pribadi dan melacak riwayat keluhan Anda.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome message for authenticated users */}
+      {isAuthenticated && userType === 'mahasiswa' && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-green-800 font-medium">
+                  Selamat datang kembali! Anda sudah login sebagai mahasiswa.
+                </p>
+                <p className="text-green-700 text-sm">
+                  Klik "Dashboard Saya" untuk melihat keluhan yang telah Anda kirimkan dan statusnya.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -412,6 +501,7 @@ export default function MahasiswaPage() {
                                 className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="Nama Anda"
                                 required={!newComment.isAnonymous}
+                                disabled={isAuthenticated}
                               />
                             </div>
                           )}

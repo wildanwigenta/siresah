@@ -18,7 +18,7 @@ export default function Home() {
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* Mahasiswa Card */}
-          <Link href="/mahasiswa" className="group">
+          <Link href="/mahasiswa/login" className="group">
             <div className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all duration-300 group-hover:scale-105">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -30,11 +30,12 @@ export default function Home() {
                 <p className="text-gray-600 mb-6">
                   Sampaikan aspirasi dan keluhan Anda untuk perbaikan kampus
                 </p>
-                <ul className="text-left text-sm text-gray-500 space-y-2">
+                <ul className="text-left text-sm text-gray-500 space-y-2 mb-6">
                   <li>• Kirim keluhan/aspirasi</li>
                   <li>• Pilih kategori dan lokasi</li>
                   <li>• Voting dan komentar</li>
                   <li>• Pantau status keluhan</li>
+                  <li>• Dashboard pribadi (dengan login)</li>
                 </ul>
               </div>
             </div>

@@ -1,9 +1,67 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { getStatistics, mockComplaints } from '@/data/mockData';
+import { categories, faculties } from '@/data/mockData';
+import { useComplaintsStore, useAuth } from '@/lib/utils';
 
 export default function StatistikPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const { complaints, isLoaded } = useComplaintsStore();
+
+  // Redirect to admin page if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      window.location.href = '/admin';
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
+  
+  // Calculate statistics from current complaints data
+  const getStatistics = () => {
+    const totalComplaints = complaints.length;
+    const statusCounts = {
+      'Belum Ditanggapi': complaints.filter(c => c.status === 'Belum Ditanggapi').length,
+      'Diproses': complaints.filter(c => c.status === 'Diproses').length,
+      'Selesai': complaints.filter(c => c.status === 'Selesai').length
+    };
+    
+    const categoryCounts = categories.map(category => ({
+      category,
+      count: complaints.filter(c => c.category === category).length
+    })).filter(item => item.count > 0);
+    
+    const facultyCounts = faculties.map(faculty => ({
+      faculty,
+      count: complaints.filter(c => c.faculty === faculty).length
+    })).filter(item => item.count > 0);
+    
+    return {
+      totalComplaints,
+      statusCounts,
+      categoryCounts,
+      facultyCounts,
+      averageVotes: totalComplaints > 0 ? Math.round(complaints.reduce((sum, c) => sum + c.votes, 0) / totalComplaints) : 0,
+      totalVotes: complaints.reduce((sum, c) => sum + c.votes, 0)
+    };
+  };
+
   const stats = getStatistics();
   
   // Weekly data simulation
@@ -28,7 +86,7 @@ export default function StatistikPage() {
   const maxMonthlyComplaints = Math.max(...monthlyData.map(d => d.complaints));
   
   // Recent activity
-  const recentActivity = mockComplaints
+  const recentActivity = complaints
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5);
 
@@ -39,7 +97,7 @@ export default function StatistikPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/admin" className="text-blue-600 hover:text-blue-800">
+              <Link href="/admin/dashboard" className="text-blue-600 hover:text-blue-800">
                 ← Kembali ke Dashboard
               </Link>
               <h1 className="text-2xl font-bold text-gray-800">Statistik & Laporan</h1>
